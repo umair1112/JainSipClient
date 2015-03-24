@@ -37,10 +37,9 @@ import android.javax.sip.header.ViaHeader;
 import android.javax.sip.message.MessageFactory;
 import android.javax.sip.message.Request;
 import android.javax.sip.message.Response;
-import android.os.AsyncTask;
 import android.util.Log;
 
-public class SipLayer extends AsyncTask<String, Void, String> implements SipListener {
+public class SipLayer extends Thread implements SipListener {
 	private static SipStack sipStack;
 	private SipProvider sipProvider;
 	private SipFactory sipFactory;
@@ -48,26 +47,43 @@ public class SipLayer extends AsyncTask<String, Void, String> implements SipList
 	private AddressFactory addressFactory;
 	private HeaderFactory headerFactory;
 	private IMessageProcessor messageProcessor;
-	
-	private String username;
-	private String ip;
-	private int port;
 
+	private static String username;
+	private static String ip;
+	private static int port;
+	private static String message;
+	private static String to;
+	private ListeningPoint udp;
+	private static String transport;
+	
 	public SipLayer() {
 
 	}
-	public void initialize(String username, String ip, int port) {
+	// public SipLayer(String to,String message){
+	// this.message = message;
+	// this.to = to;
+	// }
+
+	synchronized public void initialize(final String username, final String ip,final int port) {
 		setUsername(username);
 		setPort(port);
 		setHost(ip);
-		
+		Runnable runInit = new Runnable() {
+			@Override
+			public void run() {
+				getSipStack();
+			}
+		};		
+		runInit.run();
+	}		
+	private void getSipStack(){
 		sipFactory = SipFactory.getInstance();
 		sipFactory.resetFactory();
 		sipFactory.setPathName("android.gov.nist");
 
 		Properties properties = new Properties();
 		properties.setProperty("android.javax.sip.STACK_NAME", "TextClient");
-		properties.setProperty("android.javax.sip.IP_ADDRESS", ip);
+		properties.setProperty("android.javax.sip.IP_ADDRESS", this.ip);
 
 		try {
 			sipStack = sipFactory.createSipStack(properties);
@@ -75,18 +91,16 @@ public class SipLayer extends AsyncTask<String, Void, String> implements SipList
 			headerFactory = sipFactory.createHeaderFactory();
 			addressFactory = sipFactory.createAddressFactory();
 			messageFactory = sipFactory.createMessageFactory();
-
-			ListeningPoint tcp = sipStack.createListeningPoint(ip, port, "tcp");
-			ListeningPoint udp = sipStack.createListeningPoint(ip, port, "udp");
-
-			sipProvider = sipStack.createSipProvider(tcp);
-			sipProvider.addSipListener(this);
+			
+			if(udp != null){
+				sipStack.deleteListeningPoint(udp);
+				sipProvider.removeSipListener(this);
+			}
+			Log.v("Message for use to check", this.getHost()+this.getPort());
+			udp = sipStack.createListeningPoint(ip, this.getPort(), "udp");
 			sipProvider = sipStack.createSipProvider(udp);
 			sipProvider.addSipListener(this);
 		} catch (PeerUnavailableException e) {
-			e.printStackTrace();
-		} catch (TooManyListenersException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (TransportNotSupportedException e) {
 			// TODO Auto-generated catch block
@@ -94,18 +108,22 @@ public class SipLayer extends AsyncTask<String, Void, String> implements SipList
 		} catch (InvalidArgumentException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} catch (TooManyListenersException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		} catch (ObjectInUseException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
-
+		} 
 	}
+	
 
 	public void sendMessage(String to, String message) throws ParseException,
 			InvalidArgumentException, SipException {
-
+		// Log.v("Check What is null", getHost()+"  "+getUsername());
 		SipURI from = addressFactory.createSipURI(getUsername(), getHost()
 				+ ":" + getPort());
+
 		Address fromNameAddress = addressFactory.createAddress(from);
 		fromNameAddress.setDisplayName(getUsername());
 		FromHeader fromHeader = headerFactory.createFromHeader(fromNameAddress,
@@ -126,9 +144,8 @@ public class SipLayer extends AsyncTask<String, Void, String> implements SipList
 		ViaHeader viaHeader = headerFactory.createViaHeader(getHost(),
 				getPort(), "udp", "branch1");
 		viaHeaders.add(viaHeader);
-
-		CallIdHeader callIdHeader = sipProvider.getNewCallId();
-
+	
+		CallIdHeader callIdHeader = sipProvider.getNewCallId(); // why this is returning nullexception??
 		CSeqHeader cSeqHeader = headerFactory.createCSeqHeader(1,
 				Request.MESSAGE);
 
@@ -152,7 +169,6 @@ public class SipLayer extends AsyncTask<String, Void, String> implements SipList
 				.createContentTypeHeader("text", "plain");
 		request.setContent(message, contentTypeHeader);
 
-		
 		sipProvider.sendRequest(request);
 	}
 
@@ -172,7 +188,7 @@ public class SipLayer extends AsyncTask<String, Void, String> implements SipList
 	public void processRequest(RequestEvent evt) {
 		Log.v("Your Message is Requested", evt.getRequest().toString());
 		Request req = evt.getRequest();
-		//System.out.println("Request Arrived");
+		// System.out.println("Request Arrived");
 		String method = req.getMethod();
 		if (!method.equals("MESSAGE")) { // bad request type.
 			messageProcessor.processError("Bad request type: " + method);
@@ -188,8 +204,8 @@ public class SipLayer extends AsyncTask<String, Void, String> implements SipList
 			ToHeader toHeader = (ToHeader) response.getHeader(ToHeader.NAME);
 			toHeader.setTag("888"); // This is mandatory as per the spec.
 			ServerTransaction st = sipProvider.getNewServerTransaction(req);
-			st.sendResponse(response); 
-			
+			st.sendResponse(response);
+
 		} catch (Throwable e) {
 			e.printStackTrace();
 			messageProcessor.processError("Can't send OK reply.");
@@ -223,29 +239,38 @@ public class SipLayer extends AsyncTask<String, Void, String> implements SipList
 		// TODO Auto-generated method stub
 
 	}
-	
-	private void setUsername(String username){
+
+	private void setUsername(String username) {
 		this.username = username;
 	}
-	private String getUsername(){
+
+	private String getUsername() {
 		return this.username;
 	}
-	
-	private void setPort(int port){
+
+	private void setPort(int port) {
 		this.port = port;
 	}
-	private int getPort(){
+
+	private int getPort() {
 		return this.port;
 	}
-	
-	private void setHost(String ip){
+
+	private void setHost(String ip) {
 		this.ip = ip;
 	}
-	private String getHost(){
+
+	private String getHost() {
 		return this.ip;
 	}
-	
-	//Interface, That connects to the MainActity for message transport
+	public void setTransport(String transport){
+		this.transport = "udp";
+	}
+	private String getTransport(){
+		return transport;
+	}
+
+	// Interface, That connects to the MainActity for message transport
 	public IMessageProcessor getMessageProcessor() {
 		return messageProcessor;
 	}
@@ -253,9 +278,6 @@ public class SipLayer extends AsyncTask<String, Void, String> implements SipList
 	public void setMessageProcessor(IMessageProcessor newMessageProcessor) {
 		messageProcessor = newMessageProcessor;
 	}
+	
 
-	@Override
-	protected String doInBackground(String... arg0) {
-		return null;
-	}
 }

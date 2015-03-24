@@ -1,7 +1,10 @@
 package jain.jainsipclientside;
 
+import java.text.ParseException;
+
 import jain.sip.client.impl.IMessageProcessor;
 import jain.sip.client.impl.SipLayer;
+import jain.sip.client.impl.SipProfile;
 import android.app.ProgressDialog;
 import android.javax.sip.InvalidArgumentException;
 import android.javax.sip.SipException;
@@ -14,13 +17,12 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 public class MainActivity extends ActionBarActivity implements
 		IMessageProcessor {
 
+	private SipProfile sipProfile;
 	private SipLayer sipManager = null;
 	private String to;
 	private String from;
@@ -29,18 +31,24 @@ public class MainActivity extends ActionBarActivity implements
 	private EditText fromE;
 	private EditText messageE;
 	private TextView ackMessage;
-	private Handler handler;
 	private ProgressDialog progressDialog;
+	private Handler handler;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+		
+		sipProfile = new SipProfile();
+		//sipProfile.setIp();
+		sipProfile.setUsername("mubeen");
+		sipProfile.setPort(5080);
+		sipProfile.setIp();
+		
+		final String username = sipProfile.getUsername();
+		final String ip = "10.0.2.15";//sipProfile.getIp();
+		final int port = sipProfile.getPort();
 		handler = new Handler();
-		String username = "mubeen";
-		int port = 5060;
-		String ip = "10.0.2.15";
-
 		toE = (EditText) findViewById(R.id.to_client_edit);
 		fromE = (EditText) findViewById(R.id.from_client_edit);
 		messageE = (EditText) findViewById(R.id.create_message);
@@ -49,8 +57,9 @@ public class MainActivity extends ActionBarActivity implements
 		progressDialog = new ProgressDialog(this);
 		progressDialog.setMessage("Sending your Message...");
 		progressDialog.setCancelable(true);
-		
+		progressDialog.show();
 		sipManager = new SipLayer();
+
 		sipManager.initialize(username, ip, port);
 		sipManager.setMessageProcessor(this);
 		from = "sip:" + username + "@" + ip + ":" + port;
@@ -69,35 +78,43 @@ public class MainActivity extends ActionBarActivity implements
 	private void getSendMessage() {
 		this.to = toE.getText().toString();
 		this.message = messageE.getText().toString();
-
-		Runnable doNetworkOperation = new Runnable() {
-
-			@Override
-			public void run() {
-				try {
-					sipManager.sendMessage(to, message);
-				} catch (java.text.ParseException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (InvalidArgumentException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (SipException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-
-				handler.post(new Runnable() {
-					@Override
-					public void run() {
-						//progressDialog.show();
-					}
-				});
-			}
-		};
-		//Toast.makeText(this, "Sending..", Toast.LENGTH_SHORT).show();
-		doNetworkOperation.run();
-
+		try {
+			sipManager.sendMessage(to, message);
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (SipException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+//		new Thread() {
+//		    @Override
+//		    public void run() {
+//		        try {
+//					sipManager.sendMessage(to, message);
+//				} catch (ParseException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				} catch (InvalidArgumentException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				} catch (SipException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//		    }
+//		}.start();
+//		handler.post(new Runnable() {
+//
+//			@Override
+//			public void run() {
+//				progressDialog.show();
+//				progressDialog.dismiss();
+//			}
+//		});
 	}
 
 	@Override
