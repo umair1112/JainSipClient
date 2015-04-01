@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+<<<<<<< HEAD
     <string name="app_name">Illuxplain</string>
     <string name="hello_world">Login Screen!</string>
     <string name="action_settings">Settings</string>
@@ -10,3 +11,12 @@
     <string name="title_activity_welcome_screen">WelcomeScreen</string>
 
 </resources>
+=======
+    <string name="app_name">JainSipClient</string>
+    <string name="action_settings">Settings</string>
+    <string name="create_message">Write Your Message</string>
+    <string name="send_button">Send</string>
+    <string name="to_client">To</string>
+	<string name="from_client">From</string>
+</resources>
+>>>>>>> b48a4926619c89c6303eca8fee0a57b3e8d434e1

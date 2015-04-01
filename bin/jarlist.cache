@@ -1,5 +1,10 @@
 # cache for current jar dependency. DO NOT EDIT.
 # format is <lastModified> <length> <SHA-1> <path>
 # Encoding is UTF-8
+<<<<<<< HEAD
 1427825862079 987314 3b20dc871d179ba476082efe543dc1b38db46e30 D:\NewJava\Illuxplain\libs\android-support-v4.jar
 1414589802631 987314 3b20dc871d179ba476082efe543dc1b38db46e30 D:\NewJava\appcompat_v7\libs\android-support-v4.jar
+=======
+1414589802631 987314 3b20dc871d179ba476082efe543dc1b38db46e30 D:\NewJava\appcompat_v7\libs\android-support-v4.jar
+1427043602826 987314 3b20dc871d179ba476082efe543dc1b38db46e30 D:\NewJava\JainSipCSide\libs\android-support-v4.jar
+>>>>>>> b48a4926619c89c6303eca8fee0a57b3e8d434e1
